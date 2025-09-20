@@ -1,0 +1,50 @@
+name: kafka
+services:
+  kafka:
+    image: apache/kafka:3.7.0
+    # container_name: kafka
+    hostname: kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://kafka:9092,PLAINTEXT://kafka:19092"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_DIRS: "/opt/kafka/logs"
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - kafka_logs:/opt/kafka/logs
+    networks:
+      - kafka
+  kafka-connect-tdengine:
+    # image: apache/kafka:3.7.0 # alpine
+    # image: wendaoji/kafka:3.7.0 # ubuntu
+    image: wendaoji/kafka-connect-tdengine:3.7.0-alpine
+    # container_name: kafka-connect
+    hostname: kafka-connect-tdengine
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+      # - "5005:5005"
+    volumes:
+      - kafka_tdengine:/opt/tdengine
+    depends_on:
+      - kafka
+    networks:
+      - kafka
+networks:
+  kafka:
