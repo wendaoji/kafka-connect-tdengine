@@ -18,11 +18,9 @@ curl -X DELETE http://localhost:8083/connectors/TDengineSinkConnector
 # post new connectors
 curl -X POST -d @connect-tdengine.json http://localhost:8083/connectors -H "Content-Type: application/json"
 # test sink
-docker compose exec -T kafka-connect-tdengine cat /opt/tdengine/test-data.txt | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic meters
+docker compose exec -T kafka-connect-tdengine cat /opt/tdengine/config/test-data.txt | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic meters
 ```
 
 # config
 
-* `taos.cfg` in `opt/tdengine/etc/`.
-* `connect-standalone-tdengine.properties` in `opt/tdengine/`.
-* `TDEngine` connector in `opt/tdengine/connect-tdengine.json`.
+* `taos.cfg` `connect-standalone-tdengine.properties` `connect-tdengine.json` in `/opt/tdengine/config/`.

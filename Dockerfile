@@ -17,22 +17,29 @@
 ###############################################################################
 
 
-FROM maven:3.9.11-eclipse-temurin-8-alpine as builder
+FROM maven:3.9.11-eclipse-temurin-8-alpine AS builder
 WORKDIR /opt
 
+ARG APK_REPO
+ARG MIRROR_URL
+ENV APK_REPO=${APK_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
+ENV MIRROR_URL=${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
+
 # Install build dependencies
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories \
-  && apk update \
-  && apk add --no-cache git \
-  && mkdir -p tdengine/etc
+RUN [ -n "${APK_REPO}" ] && sed -i "s/dl-cdn.alpinelinux.org/${APK_REPO}/g" /etc/apk/repositories; \
+  apk update \
+  && apk add --no-cache git
 
-RUN git clone --branch 3.0 https://github.com/taosdata/kafka-connect-tdengine.git \
+COPY settings.xml.template /opt/settings.xml.template
+
+RUN sed "s|\${MAVEN_MIRROR_URL}|$MIRROR_URL|g" /opt/settings.xml.template > /opt/settings.xml \
+  && git clone --branch 3.0 https://github.com/taosdata/kafka-connect-tdengine.git \
   && cd kafka-connect-tdengine \
-  && mvn clean package -Dmaven.test.skip=true \
-  && unzip -d tdengine target/components/packages/taosdata-kafka-connect-tdengine-*.zip
+  && mvn clean package -s /opt/settings.xml -Dmaven.test.skip=true \
+  && mv target/components/packages/taosdata-kafka-connect-tdengine-*.zip /opt
 
 
-FROM wendaoji/tdengine-tsdb-oss-client:3.3.7.5-alpine as client
+FROM wendaoji/tdengine-tsdb-oss-client:3.3.7.5-alpine AS client
 WORKDIR /opt
 
 # https://github.com/apache/kafka/blob/trunk/docker/docker_official_images/3.7.0/jvm/Dockerfile
@@ -46,22 +53,29 @@ WORKDIR /opt/kafka
 # 3. 使用 LD_LIBRARY_PATH 更标准。
 # 如果使用的是 glibc(ubuntu/centos)，则一般需要 libtaos.so libtaosnative.so 即可。
 # 如果使用 musl libc(alpine)，则可能还需要 libunwind.so.8 liblzma.so.5 libstdc++.so.6 libgcc_s.so.1
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-"/opt/tdengine/tdengine-tsdb-oss-client/lib"}
+ARG LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-"/opt/tdengine-tsdb-oss-client/lib"}
 
-COPY --chown=appuser:appuser --from=builder /opt/tdengine /opt/
-COPY --chown=appuser:appuser --from=client /opt/tdengine-tsdb-oss-client /opt/tdengine/tdengine-tsdb-oss-client-3.3.7.5-linux-x64-alpine
-COPY --chown=appuser:appuser tdengine/* /opt/tdengine/
+
+COPY --chown=appuser:appuser config /opt/tdengine/config
+COPY --chown=appuser:appuser --from=builder /opt/taosdata-kafka-connect-tdengine-*.zip /opt/
+COPY --chown=appuser:appuser --from=client /opt/tdengine-tsdb-oss-client /opt/tdengine-tsdb-oss-client-3.3.7.5-linux-x64-alpine
+
 
 # TDEngine jdbc 连接串中指定的 cfgdir 没有起作用，这里指定到默认路径 /etc/taos 下。
 # taos.cfg 中必须指定一个可写的日志目录(logDir)，如 logDir /opt/tdengine/logs
 RUN set -eux \
-  && ln -s /opt/tdengine/taosdata-kafka-connect-tdengine-* /opt/tdengine/taosdata-kafka-connect-tdengine \
-  && ln -s /opt/tdengine/tdengine-tsdb-oss-client-* /opt/tdengine/tdengine-tsdb-oss-client \
-  && ln -s opt/tdengine/etc/taos.cfg /etc/taos/taos.cfg
+  && unzip -d /opt/ /opt/taosdata-kafka-connect-tdengine-*.zip \
+  && rm -f /opt/taosdata-kafka-connect-tdengine-*.zip \
+  && chown -R appuser:appuser /opt/taosdata-kafka-connect-tdengine-* \
+  && ln -s /opt/taosdata-kafka-connect-tdengine-* /opt/taosdata-kafka-connect-tdengine \
+  && ln -s /opt/tdengine-tsdb-oss-client-* /opt/tdengine-tsdb-oss-client \
+  && mkdir -p /etc/taos \
+  && ln -s /opt/tdengine/config/taos.cfg /etc/taos/taos.cfg
 
 VOLUME ["/opt/tdengine"]
 
 USER appuser
 
-
-CMD [ "/opt/kafka/bin/connect-standalone.sh /opt/tdengine/connect-standalone-tdengine.properties /opt/tdengine/connect-tdengine.json" ]
+# CMD ["/etc/kafka/docker/run"]
+CMD ["/opt/kafka/bin/connect-standalone.sh", "/opt/tdengine/config/connect-standalone-tdengine.properties","/opt/tdengine/config/connect-tdengine.json" ]

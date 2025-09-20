@@ -2,7 +2,6 @@ name: kafka
 services:
   kafka:
     image: apache/kafka:3.7.0
-    # container_name: kafka
     hostname: kafka
     restart: unless-stopped
     environment:
@@ -22,29 +21,29 @@ services:
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
       KAFKA_NUM_PARTITIONS: 3
-      KAFKA_LOG_DIRS: "/opt/kafka/logs"
+      # KAFKA_LOG_DIRS: "/var/lib/kafka/data"
     ports:
       - "9092:9092"
     volumes:
       - kafka_data:/var/lib/kafka/data
-      - kafka_logs:/opt/kafka/logs
     networks:
       - kafka
   kafka-connect-tdengine:
     # image: apache/kafka:3.7.0 # alpine
     # image: wendaoji/kafka:3.7.0 # ubuntu
     image: wendaoji/kafka-connect-tdengine:3.7.0-alpine
-    # container_name: kafka-connect
     hostname: kafka-connect-tdengine
     restart: unless-stopped
     ports:
       - "8083:8083"
-      # - "5005:5005"
     volumes:
       - kafka_tdengine:/opt/tdengine
     depends_on:
       - kafka
     networks:
       - kafka
+volumes:
+  kafka_data:
+  kafka_tdengine:
 networks:
   kafka:
