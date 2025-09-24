@@ -107,6 +107,9 @@ jobs:
           # ${{ secrets.DOCKERHUB_USERNAME }}/nfs-server-alpine:${{ steps.semver.outputs.patch }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            UBUNTU_REPO=archive.ubuntu.com
+            MIRROR_URL=https://repo.maven.apache.org/maven2/
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
