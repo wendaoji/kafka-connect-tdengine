@@ -20,12 +20,12 @@
 FROM maven:3.9.11-eclipse-temurin-8 AS builder
 WORKDIR /opt
 
-ARG VERSION
+ARG VERSION=3.0
+
 ARG UBUNTU_REPO
 ARG MIRROR_URL
-ENV VERSION ${VERSION:-"3.0"}
-ENV UBUNTU_REPO=${UBUNTU_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
-ENV MIRROR_URL=${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
+ENV UBUNTU_REPO ${UBUNTU_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
+ENV MIRROR_URL ${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
 
 # Install build dependencies
 RUN set -eux \
@@ -50,7 +50,8 @@ WORKDIR /opt
 
 # https://github.com/apache/kafka/blob/trunk/docker/docker_official_images/3.7.0/jvm/Dockerfile
 # FROM apache/kafka:3.7.0
-FROM wendaoji/kafka:3.7.0
+ARG KAFKA_VERSION=3.7.0
+FROM wendaoji/kafka:${KAFKA_VERSION}
 USER root
 EXPOSE 8083
 WORKDIR /opt/kafka
