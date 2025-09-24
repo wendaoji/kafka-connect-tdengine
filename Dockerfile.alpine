@@ -17,40 +17,33 @@
 ###############################################################################
 
 
-FROM maven:3.9.11-eclipse-temurin-8 AS builder
+FROM maven:3.9.11-eclipse-temurin-8-alpine AS builder
 WORKDIR /opt
 
-ARG VERSION
-ARG UBUNTU_REPO
+ARG APK_REPO
 ARG MIRROR_URL
-ENV VERSION ${VERSION:-"3.0"}
-ENV UBUNTU_REPO=${UBUNTU_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
+ENV APK_REPO=${APK_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
 ENV MIRROR_URL=${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
 
 # Install build dependencies
-RUN set -eux \
-  && [ -n "${UBUNTU_REPO}" ] && sed -i "s|archive.ubuntu.com|${UBUNTU_REPO}|g" /etc/apt/sources.list.d/ubuntu.sources; \
-  apt-get update \
-  && apt-get install -y locales git \
-  && rm -rf /var/lib/apt/lists/* \
-  && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
-  && chmod +x /entrypoint.sh
+RUN [ -n "${APK_REPO}" ] && sed -i "s/dl-cdn.alpinelinux.org/${APK_REPO}/g" /etc/apk/repositories; \
+  apk update \
+  && apk add --no-cache git
 
 COPY settings.xml.template /opt/settings.xml.template
 
 RUN sed "s|\${MAVEN_MIRROR_URL}|$MIRROR_URL|g" /opt/settings.xml.template > /opt/settings.xml \
-  && git clone --branch ${VERSION} https://github.com/taosdata/kafka-connect-tdengine.git \
+  && git clone --branch 3.0 https://github.com/taosdata/kafka-connect-tdengine.git \
   && cd kafka-connect-tdengine \
   && mvn clean package -s /opt/settings.xml -Dmaven.test.skip=true \
   && mv target/components/packages/taosdata-kafka-connect-tdengine-*.zip /opt
 
 
-FROM wendaoji/tdengine-tsdb-oss-client:latest AS client
+FROM wendaoji/tdengine-tsdb-oss-client:3.3.7.5-alpine AS client
 WORKDIR /opt
 
 # https://github.com/apache/kafka/blob/trunk/docker/docker_official_images/3.7.0/jvm/Dockerfile
-# FROM apache/kafka:3.7.0
-FROM wendaoji/kafka:3.7.0
+FROM apache/kafka:3.7.0
 USER root
 EXPOSE 8083
 WORKDIR /opt/kafka
@@ -66,7 +59,7 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-"/opt/tdengine-tsdb-oss-client/lib"}
 
 COPY --chown=appuser:appuser config /opt/tdengine/config
 COPY --chown=appuser:appuser --from=builder /opt/taosdata-kafka-connect-tdengine-*.zip /opt/
-COPY --chown=appuser:appuser --from=client /usr/local/taos /opt/tdengine-tsdb-oss-client
+COPY --chown=appuser:appuser --from=client /opt/tdengine-tsdb-oss-client /opt/tdengine-tsdb-oss-client-3.3.7.5-linux-x64-alpine
 
 
 # TDEngine jdbc 连接串中指定的 cfgdir 没有起作用，这里指定到默认路径 /etc/taos 下。
@@ -76,6 +69,7 @@ RUN set -eux \
   && rm -f /opt/taosdata-kafka-connect-tdengine-*.zip \
   && chown -R appuser:appuser /opt/taosdata-kafka-connect-tdengine-* \
   && ln -s /opt/taosdata-kafka-connect-tdengine-* /opt/taosdata-kafka-connect-tdengine \
+  && ln -s /opt/tdengine-tsdb-oss-client-* /opt/tdengine-tsdb-oss-client \
   && mkdir -p /etc/taos \
   && ln -s /opt/tdengine/config/taos.cfg /etc/taos/taos.cfg
 
