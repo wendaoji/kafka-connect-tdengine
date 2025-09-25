@@ -31,10 +31,12 @@ ENV MIRROR_URL ${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
 RUN set -eux \
   && [ -n "${UBUNTU_REPO}" ] && sed -i "s|archive.ubuntu.com|${UBUNTU_REPO}|g" /etc/apt/sources.list.d/ubuntu.sources; \
   apt-get update \
-  && apt-get install -y locales git \
+  && apt-get install -y --no-install-recommends locales git \
+  && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
+ENV LANG en_US.utf8
 COPY settings.xml.template /opt/settings.xml.template
 
 RUN sed "s|\${MAVEN_MIRROR_URL}|$MIRROR_URL|g" /opt/settings.xml.template > /opt/settings.xml \
@@ -50,6 +52,10 @@ WORKDIR /opt
 # https://github.com/apache/kafka/blob/trunk/docker/docker_official_images/3.7.0/jvm/Dockerfile
 # FROM apache/kafka:3.7.0
 FROM wendaoji/kafka:${KAFKA_VERSION}
+
+ARG UBUNTU_REPO
+ENV UBUNTU_REPO ${UBUNTU_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
+
 USER root
 EXPOSE 8083
 WORKDIR /opt/kafka
@@ -71,12 +77,20 @@ COPY --chown=appuser:appuser --from=client /usr/local/taos /opt/tdengine-tsdb-os
 # TDEngine jdbc 连接串中指定的 cfgdir 没有起作用，这里指定到默认路径 /etc/taos 下。
 # taos.cfg 中必须指定一个可写的日志目录(logDir)，如 logDir /opt/tdengine/logs
 RUN set -eux \
+  && [ -n "${UBUNTU_REPO}" ] && sed -i "s|archive.ubuntu.com|${UBUNTU_REPO}|g" /etc/apt/sources.list.d/ubuntu.sources; \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends locales unzip \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* \
+  && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
   && unzip -d /opt/ /opt/taosdata-kafka-connect-tdengine-*.zip \
   && rm -f /opt/taosdata-kafka-connect-tdengine-*.zip \
   && chown -R appuser:appuser /opt/taosdata-kafka-connect-tdengine-* \
   && ln -s /opt/taosdata-kafka-connect-tdengine-* /opt/taosdata-kafka-connect-tdengine \
   && mkdir -p /etc/taos \
   && ln -s /opt/tdengine/config/taos.cfg /etc/taos/taos.cfg
+
+ENV LANG en_US.utf8
 
 VOLUME ["/opt/tdengine"]
 
