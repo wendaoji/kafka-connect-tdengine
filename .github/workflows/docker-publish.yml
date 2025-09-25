@@ -13,12 +13,12 @@ on:
       kafka_version:
         description: "Kafka version to build against"
         required: true
-        default: ""
+        default: "3.7.0"
         type: string
       version:
         description: "kafka connect tdengine version to build against"
         required: true
-        default: ""
+        default: "3.0"
         type: string
   push:
     # branches: [ "master" ]
