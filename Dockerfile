@@ -24,12 +24,12 @@ ARG VERSION=3.0
 
 ARG UBUNTU_REPO
 ARG MIRROR_URL
-ENV UBUNTU_REPO ${UBUNTU_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
+ENV UBUNTU_REPO ${UBUNTU_REPO:-"https://mirrors.tuna.tsinghua.edu.cn"}
 ENV MIRROR_URL ${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
 
 # Install build dependencies
 RUN set -eux \
-  && [ -n "${UBUNTU_REPO}" ] && sed -i "s|archive.ubuntu.com|${UBUNTU_REPO}|g" /etc/apt/sources.list.d/ubuntu.sources; \
+  && [ -n "${UBUNTU_REPO}" ] && sed -i "s#http://(archive|ports).ubuntu.com#${UBUNTU_REPO}#g" /etc/apt/sources.list.d/ubuntu.sources; \
   apt-get update \
   && apt-get install -y --no-install-recommends locales git \
   && apt-get clean \
@@ -54,7 +54,7 @@ WORKDIR /opt
 FROM wendaoji/kafka:${KAFKA_VERSION}
 
 ARG UBUNTU_REPO
-ENV UBUNTU_REPO ${UBUNTU_REPO:-"mirrors.tuna.tsinghua.edu.cn"}
+ENV UBUNTU_REPO ${UBUNTU_REPO:-"https://mirrors.tuna.tsinghua.edu.cn"}
 
 USER root
 EXPOSE 8083
@@ -77,7 +77,7 @@ COPY --chown=appuser:appuser --from=client /usr/local/taos /opt/tdengine-tsdb-os
 # TDEngine jdbc 连接串中指定的 cfgdir 没有起作用，这里指定到默认路径 /etc/taos 下。
 # taos.cfg 中必须指定一个可写的日志目录(logDir)，如 logDir /opt/tdengine/logs
 RUN set -eux \
-  && [ -n "${UBUNTU_REPO}" ] && sed -i "s|archive.ubuntu.com|${UBUNTU_REPO}|g" /etc/apt/sources.list.d/ubuntu.sources; \
+  && [ -n "${UBUNTU_REPO}" ] && sed -i "s#http://(archive|ports).ubuntu.com#${UBUNTU_REPO}#g" /etc/apt/sources.list.d/ubuntu.sources; \
   apt-get update \
   && apt-get install -y --no-install-recommends locales unzip \
   && apt-get clean \

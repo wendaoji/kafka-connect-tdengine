@@ -46,6 +46,9 @@ jobs:
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
 
     steps:
       - name: Checkout repository
@@ -69,6 +72,15 @@ jobs:
       # https://github.com/docker/setup-buildx-action
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.0.0 # v3.0.0
+
+      - name: Determine build args
+        id: args
+        run: |
+          if [[ "${{ matrix.platform }}" == *"arm64"* ]]; then
+            echo "UBUNTU_REPO=http://ports.ubuntu.com" >> $GITHUB_ENV
+          else
+            echo "UBUNTU_REPO=http://archive.ubuntu.com" >> $GITHUB_ENV
+          fi
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
@@ -118,7 +130,7 @@ jobs:
         with:
           context: .
           # file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64/v8
+          platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           # tags: |
           # ${{ secrets.DOCKERHUB_USERNAME }}/nfs-server-alpine:latest
@@ -128,7 +140,7 @@ jobs:
           build-args: |
             VERSION=${{ env.VERSION }}
             KAFKA_VERSION=${{ env.KAFKA_VERSION }}
-            UBUNTU_REPO=archive.ubuntu.com
+            UBUNTU_REPO=${{env.UBUNTU_REPO}}
             MIRROR_URL=https://repo.maven.apache.org/maven2/
           cache-from: type=gha
           cache-to: type=gha,mode=max
