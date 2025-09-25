@@ -78,7 +78,7 @@ COPY --chown=appuser:appuser --from=client /usr/local/taos /opt/tdengine-tsdb-os
 # taos.cfg 中必须指定一个可写的日志目录(logDir)，如 logDir /opt/tdengine/logs
 RUN set -eux \
   && [ -n "${UBUNTU_REPO}" ] && sed -i "s|archive.ubuntu.com|${UBUNTU_REPO}|g" /etc/apt/sources.list.d/ubuntu.sources; \
-  && apt-get update \
+  apt-get update \
   && apt-get install -y --no-install-recommends locales unzip \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
