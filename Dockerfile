@@ -21,22 +21,23 @@ FROM maven:3.9.11-eclipse-temurin-8 AS builder
 WORKDIR /opt
 
 ARG VERSION=3.0
-ARG UBUNTU_REPO
-ARG MAVEN_CENTRAL_REPO
+ARG UBUNTU_REPO=""
+ARG MAVEN_CENTRAL_REPO="https://repo.maven.apache.org/maven2/"
 
 # Install build dependencies
 RUN set -eux \
-  && [ -n "${UBUNTU_REPO}" ] && sed -i "s#http://(archive|ports).ubuntu.com#${UBUNTU_REPO}#g" /etc/apt/sources.list.d/ubuntu.sources; \
+  && [ -n "${UBUNTU_REPO}" ] && sed -i "s#http://\(archive\|ports\)\.ubuntu\.com#${UBUNTU_REPO}#g" /etc/apt/sources.list.d/ubuntu.sources; \
   apt-get update \
   && apt-get install -y --no-install-recommends locales git \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
-ENV LANG en_US.utf8
+ENV LANG=en_US.utf8
 COPY settings.xml.template /opt/settings.xml.template
 
-RUN sed "s|\${MAVEN_CENTRAL_REPO}|$MAVEN_CENTRAL_REPO|g" /opt/settings.xml.template > /opt/settings.xml \
+RUN set -eux \
+  && sed "s|\${MAVEN_CENTRAL_REPO}|$MAVEN_CENTRAL_REPO|g" /opt/settings.xml.template > /opt/settings.xml \
   && git clone --branch ${VERSION} https://github.com/taosdata/kafka-connect-tdengine.git \
   && cd kafka-connect-tdengine \
   && mvn clean package -s /opt/settings.xml -Dmaven.test.skip=true \
@@ -50,8 +51,7 @@ WORKDIR /opt
 # FROM apache/kafka:3.7.0
 FROM wendaoji/kafka:${KAFKA_VERSION}
 
-ARG UBUNTU_REPO
-ENV UBUNTU_REPO ${UBUNTU_REPO:-"https://mirrors.tuna.tsinghua.edu.cn"}
+ARG UBUNTU_REPO=""
 
 USER root
 EXPOSE 8083
@@ -62,19 +62,23 @@ WORKDIR /opt/kafka
 # 3. 使用 LD_LIBRARY_PATH 更标准。
 # 如果使用的是 glibc(ubuntu/centos)，则一般需要 libtaos.so libtaosnative.so 即可。
 # 如果使用 musl libc(alpine)，则可能还需要 libunwind.so.8 liblzma.so.5 libstdc++.so.6 libgcc_s.so.1
-ARG LD_LIBRARY_PATH
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-"/opt/tdengine-tsdb-oss-client/lib"}
+# ARG LD_LIBRARY_PATH
+# ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-"/usr/local/taos/driver"}
 
 
 COPY --chown=appuser:appuser config /opt/tdengine/config
 COPY --chown=appuser:appuser --from=builder /opt/taosdata-kafka-connect-tdengine-*.zip /opt/
-COPY --chown=appuser:appuser --from=client /usr/local/taos /opt/tdengine-tsdb-oss-client
+COPY --chown=appuser:appuser --from=client /usr/local/taos /usr/local/taos
+COPY --chown=appuser:appuser --from=client /lib/libtaosnative.so /lib/libtaosnative.so
+COPY --chown=appuser:appuser --from=client /lib/libtaosnative.so.1 /lib/libtaosnative.so.1
+COPY --chown=appuser:appuser --from=client /lib/libtaos.so /lib/libtaos.so
+COPY --chown=appuser:appuser --from=client /lib/libtaos.so.1 /lib/libtaos.so.1
 
 
 # TDEngine jdbc 连接串中指定的 cfgdir 没有起作用，这里指定到默认路径 /etc/taos 下。
 # taos.cfg 中必须指定一个可写的日志目录(logDir)，如 logDir /opt/tdengine/logs
 RUN set -eux \
-  && [ -n "${UBUNTU_REPO}" ] && sed -i "s#http://(archive|ports).ubuntu.com#${UBUNTU_REPO}#g" /etc/apt/sources.list.d/ubuntu.sources; \
+  && [ -n "${UBUNTU_REPO}" ] && sed -i "s#http://\(archive\|ports\)\.ubuntu\.com#${UBUNTU_REPO}#g" /etc/apt/sources.list.d/ubuntu.sources; \
   apt-get update \
   && apt-get install -y --no-install-recommends locales unzip \
   && apt-get clean \
@@ -85,9 +89,12 @@ RUN set -eux \
   && chown -R appuser:appuser /opt/taosdata-kafka-connect-tdengine-* \
   && ln -s /opt/taosdata-kafka-connect-tdengine-* /opt/taosdata-kafka-connect-tdengine \
   && mkdir -p /etc/taos \
-  && ln -s /opt/tdengine/config/taos.cfg /etc/taos/taos.cfg
+  && ln -s /opt/tdengine/config/taos.cfg /etc/taos/taos.cfg \
+  # && echo "/usr/local/taos/driver" | tee /etc/ld.so.conf.d/taos.conf \
+  && export PATH=/usr/local/taos/bin:$PATH \
+  && ldconfig
 
-ENV LANG en_US.utf8
+ENV LANG=en_US.utf8
 
 VOLUME ["/opt/tdengine"]
 

@@ -4,7 +4,7 @@
     "connector.class": "com.taosdata.kafka.connect.sink.TDengineSinkConnector",
     "tasks.max": "1",
     "topics": "meters",
-    "connection.url": "jdbc:TAOS://tsdb:6030/test?cfgdir=/opt/tdengine/config",
+    "connection.url": "jdbc:TAOS://192.168.27.253:6030/test?cfgdir=/opt/tdengine/config",
     "connection.user": "root",
     "connection.password": "taosdata",
     "connection.database": "power",

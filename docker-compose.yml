@@ -31,7 +31,7 @@ services:
   kafka-connect-tdengine:
     # image: apache/kafka:3.7.0 # alpine
     # image: wendaoji/kafka:3.7.0 # ubuntu
-    image: wendaoji/kafka-connect-tdengine:3.7.0
+    image: wendaoji/kafka-connect-tdengine:3.0
     hostname: kafka-connect-tdengine
     restart: unless-stopped
     ports:
