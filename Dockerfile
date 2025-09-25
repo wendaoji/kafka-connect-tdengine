@@ -16,7 +16,7 @@
 # limitations under the License.
 ###############################################################################
 
-
+ARG KAFKA_VERSION=3.7.0
 FROM maven:3.9.11-eclipse-temurin-8 AS builder
 WORKDIR /opt
 
@@ -50,7 +50,6 @@ WORKDIR /opt
 
 # https://github.com/apache/kafka/blob/trunk/docker/docker_official_images/3.7.0/jvm/Dockerfile
 # FROM apache/kafka:3.7.0
-ARG KAFKA_VERSION=3.7.0
 FROM wendaoji/kafka:${KAFKA_VERSION}
 USER root
 EXPOSE 8083
