@@ -21,11 +21,8 @@ FROM maven:3.9.11-eclipse-temurin-8 AS builder
 WORKDIR /opt
 
 ARG VERSION=3.0
-
 ARG UBUNTU_REPO
-ARG MIRROR_URL
-ENV UBUNTU_REPO ${UBUNTU_REPO:-"https://mirrors.tuna.tsinghua.edu.cn"}
-ENV MIRROR_URL ${MIRROR_URL:-"https://maven.aliyun.com/repository/central"}
+ARG MAVEN_CENTRAL_REPO
 
 # Install build dependencies
 RUN set -eux \
@@ -39,7 +36,7 @@ RUN set -eux \
 ENV LANG en_US.utf8
 COPY settings.xml.template /opt/settings.xml.template
 
-RUN sed "s|\${MAVEN_MIRROR_URL}|$MIRROR_URL|g" /opt/settings.xml.template > /opt/settings.xml \
+RUN sed "s|\${MAVEN_CENTRAL_REPO}|$MAVEN_CENTRAL_REPO|g" /opt/settings.xml.template > /opt/settings.xml \
   && git clone --branch ${VERSION} https://github.com/taosdata/kafka-connect-tdengine.git \
   && cd kafka-connect-tdengine \
   && mvn clean package -s /opt/settings.xml -Dmaven.test.skip=true \

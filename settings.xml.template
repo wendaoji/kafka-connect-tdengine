@@ -8,7 +8,7 @@
       <id>custom-central</id>
       <mirrorOf>central</mirrorOf>
       <name>Custom Maven Central Mirror</name>
-      <url>${MAVEN_MIRROR_URL}</url>
+      <url>${MAVEN_CENTRAL_REPO}</url>
     </mirror>
   </mirrors>
 
