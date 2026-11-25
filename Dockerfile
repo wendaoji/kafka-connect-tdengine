@@ -43,6 +43,8 @@ RUN set -eux \
   && mvn clean package -s /opt/settings.xml -Dmaven.test.skip=true \
   && mv target/components/packages/taosdata-kafka-connect-tdengine-*.zip /opt
 
+COPY iotdb-connector /opt/iotdb-connector
+RUN mvn -B -f /opt/iotdb-connector/pom.xml -s /opt/settings.xml package
 
 FROM wendaoji/tdengine-tsdb-oss-client:latest AS client
 WORKDIR /opt
@@ -67,7 +69,9 @@ WORKDIR /opt/kafka
 
 
 COPY --chown=appuser:appuser config /opt/tdengine/config
+COPY --chown=appuser:appuser config/connect-standalone-iotdb.properties /opt/connect-standalone-iotdb.properties
 COPY --chown=appuser:appuser --from=builder /opt/taosdata-kafka-connect-tdengine-*.zip /opt/
+COPY --chown=appuser:appuser --from=builder /opt/iotdb-connector/target/kafka-connect-iotdb.jar /opt/iotdb-plugins/kafka-connect-iotdb.jar
 COPY --chown=appuser:appuser --from=client /usr/local/taos /usr/local/taos
 COPY --chown=appuser:appuser --from=client /lib/libtaosnative.so /lib/libtaosnative.so
 COPY --chown=appuser:appuser --from=client /lib/libtaosnative.so.1 /lib/libtaosnative.so.1
